@@ -2,8 +2,12 @@ import Redis from 'ioredis';
 import dotenv from 'dotenv';
 import path from 'path';
 
-// Load environment variables from .env.local
-dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
+// Load environment variables based on NODE_ENV
+if (process.env.NODE_ENV === 'production') {
+  dotenv.config({ path: path.resolve(process.cwd(), '.env.production') });
+} else {
+  dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
+}
 
 // Create Redis client
 const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {

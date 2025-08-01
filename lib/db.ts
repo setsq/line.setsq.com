@@ -2,8 +2,12 @@ import { Pool } from 'pg';
 import dotenv from 'dotenv';
 import path from 'path';
 
-// Load environment variables from .env.local
-dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
+// Load environment variables based on NODE_ENV
+if (process.env.NODE_ENV === 'production') {
+  dotenv.config({ path: path.resolve(process.cwd(), '.env.production') });
+} else {
+  dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
+}
 
 // Create a connection pool
 const pool = new Pool({
