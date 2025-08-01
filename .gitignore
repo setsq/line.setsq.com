@@ -19,6 +19,7 @@
 
 # production
 /build
+/dist
 
 # misc
 .DS_Store
@@ -30,8 +31,13 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# env files (IMPORTANT: Contains secrets!)
+.env
+.env.local
+.env.production
+.env.development.local
+.env.test.local
+.env.production.local
 
 # vercel
 .vercel
@@ -39,3 +45,24 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# logs
+logs/
+*.log
+
+# PM2
+.pm2/
+
+# Editor directories and files
+.idea
+.vscode
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Redis dump
+dump.rdb
