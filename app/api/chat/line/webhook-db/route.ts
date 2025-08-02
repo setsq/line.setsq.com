@@ -14,6 +14,68 @@ const pool = new Pool({
   connectionTimeoutMillis: 2000,
 });
 
+// Batch notification state
+let pendingNotification = false;
+let notificationTimer: NodeJS.Timeout | null = null;
+
+// Function to notify App 2 about new webhook events
+async function notifyApp2() {
+  const apiUrl = process.env.APP2_API_URL || 'https://dev.setsq.com/api/chat/line/process-webhooks';
+  const apiKey = process.env.WEBHOOK_PROCESSOR_API_KEY || 'AigddeggeKKll23';
+  const channel = process.env.APP2_CHANNEL_NAME || 'line_2';
+
+  try {
+    console.log('[DB Webhook] Notifying App 2 to process events...');
+    
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        channel: channel,
+        limit: 50,  // Process up to 50 events per batch
+        apiKey: apiKey
+      })
+    });
+
+    const result = await response.json();
+
+    if (response.ok) {
+      console.log(`[DB Webhook] App 2 processed ${result.processed || 0} events successfully`);
+      if (result.failed && result.failed > 0) {
+        console.log(`[DB Webhook] App 2 failed to process ${result.failed} events`);
+      }
+    } else {
+      console.error('[DB Webhook] App 2 processing failed:', result.error || 'Unknown error');
+    }
+  } catch (error) {
+    // Don't throw - just log the error
+    console.error('[DB Webhook] Failed to notify App 2:', error);
+  }
+}
+
+// Schedule batch notification with debouncing
+function scheduleNotification() {
+  if (!pendingNotification) {
+    pendingNotification = true;
+
+    // Clear existing timer if any
+    if (notificationTimer) {
+      clearTimeout(notificationTimer);
+    }
+
+    // Wait 5 seconds to batch multiple webhook events
+    notificationTimer = setTimeout(async () => {
+      pendingNotification = false;
+      notificationTimer = null;
+      await notifyApp2();
+    }, 5000);
+
+    console.log('[DB Webhook] Scheduled App 2 notification in 5 seconds');
+  }
+}
+
 // Simple signature validation (no external imports)
 async function validateSignature(
   body: string,
@@ -71,7 +133,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Process and store each event
+    let eventsStored = 0;
+    
     if (payload.events && Array.isArray(payload.events)) {
+      console.log(`[DB Webhook] Processing ${payload.events.length} events from LINE`);
+      
       for (const event of payload.events) {
         try {
           // Store in database
@@ -94,6 +160,7 @@ export async function POST(request: NextRequest) {
             if (result.rows.length > 0) {
               const { id } = result.rows[0];
               console.log(`[DB Webhook] Stored event ${event.webhookEventId} with ID: ${id}`);
+              eventsStored++;
             }
           } finally {
             client.release();
@@ -102,6 +169,12 @@ export async function POST(request: NextRequest) {
           console.error(`[DB Webhook] Failed to store event ${event.webhookEventId}:`, error);
           // Continue processing other events
         }
+      }
+      
+      // Schedule notification to App 2 if we stored any events
+      if (eventsStored > 0) {
+        console.log(`[DB Webhook] Successfully stored ${eventsStored} events`);
+        scheduleNotification();
       }
     }
 
@@ -143,7 +216,14 @@ export async function GET() {
       NODE_ENV: process.env.NODE_ENV,
       hasChannelSecret: !!process.env.LINE_CHANNEL_SECRET,
       hasAccessToken: !!process.env.LINE_CHANNEL_ACCESS_TOKEN,
-      dbHost: process.env.DB_HOST || '192.168.11.50'
+      dbHost: process.env.DB_HOST || '192.168.11.50',
+      app2ApiUrl: process.env.APP2_API_URL || 'https://dev.setsq.com/api/chat/line/process-webhooks',
+      app2Channel: process.env.APP2_CHANNEL_NAME || 'line_2',
+      hasApp2ApiKey: !!process.env.WEBHOOK_PROCESSOR_API_KEY
+    },
+    notification: {
+      pendingNotification: pendingNotification,
+      batchDelay: '5 seconds'
     }
   });
 }
