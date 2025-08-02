@@ -1,0 +1,24 @@
+{
+  "events": [
+    {
+      "mode": "active",
+      "type": "message",
+      "source": {
+        "type": "user",
+        "userId": "Ue81c87b1cdae8614704bfd5fef6b766f"
+      },
+      "message": {
+        "id": "572582867889815966",
+        "type": "text",
+        "text": "Test message with destination"
+      },
+      "timestamp": 1754117288580,
+      "replyToken": "e5059776bf73478ab83f49c0b27da65b",
+      "webhookEventId": "TEST_EVENT_WITH_DESTINATION_001",
+      "deliveryContext": {
+        "isRedelivery": false
+      }
+    }
+  ],
+  "destination": "U5d6b8637f04d99d187484d0200d19d7c"
+}

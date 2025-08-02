@@ -65,14 +65,14 @@ function scheduleNotification() {
       clearTimeout(notificationTimer);
     }
 
-    // Wait 5 seconds to batch multiple webhook events
+    // Call notification immediately with minimal delay
     notificationTimer = setTimeout(async () => {
       pendingNotification = false;
       notificationTimer = null;
       await notifyApp2();
-    }, 5000);
+    }, 100);  // Minimal delay for debouncing
 
-    console.log('[DB Webhook] Scheduled App 2 notification in 5 seconds');
+    console.log('[DB Webhook] Notifying App 2 immediately');
   }
 }
 
@@ -127,6 +127,7 @@ export async function POST(request: NextRequest) {
     try {
       payload = JSON.parse(body);
       console.log('[DB Webhook] Parsed payload with', payload.events?.length || 0, 'events');
+      console.log('[DB Webhook] Full payload:', JSON.stringify(payload, null, 2));
     } catch (error) {
       console.error('[DB Webhook] ERROR: Invalid JSON payload:', error);
       return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
@@ -153,7 +154,10 @@ export async function POST(request: NextRequest) {
               [
                 'line_2',                    // Hardcoded channel value
                 event.type,                  // Event type (message, follow, etc.)
-                JSON.stringify(event)        // Complete webhook data as JSONB
+                JSON.stringify({             // Store event with destination
+                  event: event,
+                  destination: payload.destination || null
+                })
               ]
             );
             

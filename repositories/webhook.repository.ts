@@ -1,5 +1,4 @@
 import pool from '../lib/db';
-import { LineWebhookEvent } from '../types/line.types';
 
 export interface WebhookEventRecord {
   id: string;  // UUID in actual table
@@ -12,41 +11,6 @@ export interface WebhookEventRecord {
   created_at: Date;
 }
 
-/**
- * Store webhook event and queue for processing
- * Implements idempotency using webhook_event_id
- */
-export async function storeAndQueueEvent(event: LineWebhookEvent): Promise<void> {
-  const client = await pool.connect();
-  
-  try {
-    // Store in database - adjusted for actual table structure
-    const result = await client.query(
-      `INSERT INTO chat.line_webhook_events (
-        channel,
-        event_type,
-        raw_data
-      ) VALUES ($1, $2, $3)
-      RETURNING id`,
-      [
-        'line_2',                    // Hardcoded channel value
-        event.type,                  // Event type (message, follow, etc.)
-        JSON.stringify(event)        // Complete webhook data as JSONB
-      ]
-    );
-
-    // Log result
-    if (result.rows.length > 0) {
-      const { id } = result.rows[0];
-      console.log(`Stored event ${event.webhookEventId} with ID: ${id}`);
-    }
-  } catch (error) {
-    console.error('Error storing webhook event:', error);
-    throw error;
-  } finally {
-    client.release();
-  }
-}
 
 
 /**
